@@ -5,6 +5,8 @@ WORKDIR /server
 
 COPY . .
 
+RUN go mod download
+
 RUN GOOS=linux GOARCH=amd64 go build -o app
 
 # final stage

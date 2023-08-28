@@ -1,0 +1,10 @@
+{
+    "example.com": "8000",
+    "www.example.com": "8000",
+    "test1.example.com": "8001",
+    "test2.example.com": "8002",
+    "test3.example.com": "8003",
+    "test4.example.com": "8004",
+    "test5.example.com": "8005",
+    "test6.example.com": "8006"
+}

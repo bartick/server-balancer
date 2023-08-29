@@ -13,6 +13,7 @@ import (
 
 func runServer(r *chi.Mux) {
 	if os.Getenv("ENVIRONMENT") == "production" {
+		fmt.Println("Starting server on port 80")
 		http.ListenAndServe("0.0.0.0:80", r)
 	} else {
 		fmt.Println("Starting server on port 8000")

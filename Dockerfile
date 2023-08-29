@@ -14,6 +14,6 @@ FROM ubuntu:22.04
 
 WORKDIR /go
 
-COPY --from=builder server/app .
+COPY --from=builder server .
 
 CMD ["ENVIRONMENT=production", "./app"]

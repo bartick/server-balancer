@@ -16,4 +16,4 @@ WORKDIR /go
 
 COPY --from=builder server .
 
-CMD ["ENVIRONMENT=production", "./app"]
+CMD ["ENVIRONMENT=production ./app"]

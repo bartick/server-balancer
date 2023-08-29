@@ -1,4 +1,4 @@
-module github.com/bartick/load-manager
+module github.com/bartick/server-balancer
 
 go 1.20
 

@@ -66,7 +66,7 @@ func runServer(hosts *HostMap, handler http.Handler) {
 		fmt.Println("Starting server...")
 
 		go func() {
-			http.ListenAndServe(":80", handler)
+			http.ListenAndServe(":80", certManager.HTTPHandler(nil))
 		}()
 
 		server.ListenAndServeTLS("", "") //Key and cert are coming from Let's Encrypt

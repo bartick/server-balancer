@@ -42,7 +42,7 @@ func ProxyHandler(hosts *HostMap) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-func runServer(hosts *HostMap) {
+func runServer(hosts *HostMap, handler http.Handler) {
 
 	hostMap := hosts.GetHostsArray()
 
@@ -60,13 +60,13 @@ func runServer(hosts *HostMap) {
 				GetCertificate: certManager.GetCertificate,
 				MinVersion:     tls.VersionTLS12,
 			},
-			Handler: nil,
+			Handler: handler,
 		}
 
 		fmt.Println("Starting server...")
 
 		go func() {
-			http.ListenAndServe(":80", nil)
+			http.ListenAndServe(":80", handler)
 		}()
 
 		server.ListenAndServeTLS("", "") //Key and cert are coming from Let's Encrypt
@@ -74,7 +74,7 @@ func runServer(hosts *HostMap) {
 	} else {
 		fmt.Println("Starting server on port 8000")
 
-		err := http.ListenAndServe(":8000", nil)
+		err := http.ListenAndServe(":8000", handler)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -91,9 +91,7 @@ func main() {
 	routes := RegexpHandler{}
 	routes.HandleFunc(regexp.MustCompile(anyPattern), ProxyHandler(hosts))
 
-	http.HandleFunc("/", ProxyHandler(hosts))
-
-	runServer(hosts)
+	runServer(hosts, http.HandlerFunc(ProxyHandler(hosts)))
 
 	// if err := http.ListenAndServe(":80", http.HandlerFunc(redirectToTls)); err != nil {
 	// 	log.Fatalf("ListenAndServe error: %v", err)

@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	// "github.com/go-chi/chi/v5"
-	// "github.com/go-chi/chi/v5/middleware"
 	// "golang.org/x/crypto/acme/autocert"
 )
 
@@ -17,7 +15,6 @@ func runServer() {
 		http.ListenAndServe("0.0.0.0:80", nil)
 	} else {
 		fmt.Println("Starting server on port 8000")
-		// create a go function
 
 		err := http.ListenAndServe("0.0.0.0:8000", nil)
 		if err != nil {
@@ -45,6 +42,8 @@ func (h *RegexpHandler) HandleFunc(pattern *regexp.Regexp, handler func(http.Res
 
 func ProxyHandler(hosts *HostMap) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Print(r.Method + " " + r.URL.String() + " \n")
+		fmt.Println("Request from:" + r.RemoteAddr + "\n")
 		re, err := hosts.GetProxy(r.Host)
 		if err != nil {
 			w.Write([]byte("404 Proxy not found"))
@@ -67,21 +66,6 @@ func main() {
 	jsonData := ReadJson()
 	hosts := NewHostMap()
 	hosts.SetAll(jsonData)
-
-	// r := chi.NewRouter()
-	// r.Use(middleware.CleanPath)
-	// r.Use(middleware.Logger)
-	// r.Use(middleware.AllowContentEncoding("deflate", "gzip"))
-	// r.Use(middleware.AllowContentType("application/json", "text/xml"))
-	// r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	// 	re, err := hosts.GetProxy(r.Host)
-	// 	if err != nil {
-	// 		w.Write([]byte("404 Proxy not found"))
-	// 		return
-	// 	}
-
-	// 	re.ServeHTTP(w, r)
-	// }))
 
 	routes := RegexpHandler{}
 	routes.HandleFunc(regexp.MustCompile(anyPattern), ProxyHandler(hosts))

@@ -43,7 +43,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.CleanPath)
-	r.Use(middleware.Logger)
+	// r.Use(middleware.Logger)
 	r.Use(middleware.AllowContentEncoding("deflate", "gzip"))
 	r.Use(middleware.AllowContentType("application/json", "text/xml"))
 	r.Handle("/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

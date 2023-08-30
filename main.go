@@ -10,39 +10,6 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-func runServer(hosts []string) {
-	if os.Getenv("ENVIRONMENT") == "production" {
-
-		certManager := autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(hosts...), //Your domain here
-			Cache:      autocert.DirCache("certs"),       //Folder for storing certificates
-		}
-
-		server := http.Server{
-			Addr: ":443",
-			TLSConfig: &tls.Config{
-				GetCertificate: certManager.GetCertificate,
-				MinVersion:     tls.VersionTLS12,
-			},
-		}
-
-		fmt.Println("Starting server...")
-
-		go http.ListenAndServe(":80", nil)
-
-		server.ListenAndServeTLS("", "") //Key and cert are coming from Let's Encrypt
-
-	} else {
-		fmt.Println("Starting server on port 8000")
-
-		err := http.ListenAndServe(":8000", nil)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}
-}
-
 // func redirectToTls(w http.ResponseWriter, r *http.Request) {
 // 	http.Redirect(w, r, "https://"+strings.Split(r.Host, ":")[0]+r.RequestURI, http.StatusMovedPermanently)
 // }
@@ -75,6 +42,45 @@ func ProxyHandler(hosts *HostMap) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
+func runServer(hosts *HostMap) {
+
+	hostMap := hosts.GetHostsArray()
+
+	if os.Getenv("ENVIRONMENT") == "production" {
+
+		certManager := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(hostMap...), //Your domain here
+			Cache:      autocert.DirCache("certs"),         //Folder for storing certificates
+		}
+
+		server := http.Server{
+			Addr: ":443",
+			TLSConfig: &tls.Config{
+				GetCertificate: certManager.GetCertificate,
+				MinVersion:     tls.VersionTLS12,
+			},
+			Handler: nil,
+		}
+
+		fmt.Println("Starting server...")
+
+		go func() {
+			http.ListenAndServe(":80", nil)
+		}()
+
+		server.ListenAndServeTLS("", "") //Key and cert are coming from Let's Encrypt
+
+	} else {
+		fmt.Println("Starting server on port 8000")
+
+		err := http.ListenAndServe(":8000", nil)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+}
+
 func main() {
 	const anyPattern = `^/.*`
 
@@ -87,7 +93,7 @@ func main() {
 
 	http.HandleFunc("/", ProxyHandler(hosts))
 
-	runServer(hosts.GetHostsArray())
+	runServer(hosts)
 
 	// if err := http.ListenAndServe(":80", http.HandlerFunc(redirectToTls)); err != nil {
 	// 	log.Fatalf("ListenAndServe error: %v", err)

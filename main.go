@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"os"
@@ -42,6 +41,14 @@ func ProxyHandler(hosts *HostMap) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
+func cacheDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	return home + "/.cache/certs"
+}
+
 func runServer(hosts *HostMap, handler http.Handler) {
 
 	hostMap := hosts.GetHostsArray()
@@ -51,16 +58,13 @@ func runServer(hosts *HostMap, handler http.Handler) {
 		certManager := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist(hostMap...), //Your domain here
-			Cache:      autocert.DirCache("certs"),         //Folder for storing certificates
+			Cache:      autocert.DirCache(cacheDir()),      //Folder for storing certificates
 		}
 
 		server := http.Server{
-			Addr: ":443",
-			TLSConfig: &tls.Config{
-				GetCertificate: certManager.GetCertificate,
-				MinVersion:     tls.VersionTLS12,
-			},
-			Handler: handler,
+			Addr:      ":443",
+			TLSConfig: certManager.TLSConfig(),
+			Handler:   handler,
 		}
 
 		fmt.Println("Starting server...")

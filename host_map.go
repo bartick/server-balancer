@@ -9,14 +9,16 @@ import (
 type Port string
 
 type HostMap struct {
-	host map[string]Port
-	re   map[string]*httputil.ReverseProxy
+	host  map[string]Port
+	admin string
+	re    map[string]*httputil.ReverseProxy
 }
 
 func NewHostMap() *HostMap {
 	return &HostMap{
-		host: make(map[string]Port),
-		re:   make(map[string]*httputil.ReverseProxy),
+		host:  make(map[string]Port),
+		re:    make(map[string]*httputil.ReverseProxy),
+		admin: "localhost:8000",
 	}
 }
 
@@ -27,6 +29,14 @@ func (hm *HostMap) GetHost(port Port) (response string, err error) {
 		}
 	}
 	return "", errors.New("host not found")
+}
+
+func (hm *HostMap) GetHostsArray() (response []string) {
+	response = append(response, hm.admin)
+	for host := range hm.host {
+		response = append(response, host)
+	}
+	return
 }
 
 func (hm *HostMap) GetPort(host string) (response Port, err error) {
@@ -44,6 +54,10 @@ func (hm *HostMap) GetProxy(host string) (response *httputil.ReverseProxy, err e
 }
 
 func (hm *HostMap) Set(host string, port Port) {
+	if port == "admin" {
+		hm.admin = host
+		return
+	}
 	hm.host[host] = port
 	hm.re[host] = httputil.NewSingleHostReverseProxy(&url.URL{Scheme: "http", Host: "localhost:" + string(port)})
 }

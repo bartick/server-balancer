@@ -1,22 +1,42 @@
 package main
 
 import (
-	// "crypto/tls"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"os"
 	"regexp"
-	// "golang.org/x/crypto/acme/autocert"
+
+	"golang.org/x/crypto/acme/autocert"
 )
 
-func runServer() {
+func runServer(hosts []string) {
 	if os.Getenv("ENVIRONMENT") == "production" {
-		fmt.Println("Starting server on port 80")
-		http.ListenAndServe("0.0.0.0:80", nil)
+
+		certManager := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(hosts...), //Your domain here
+			Cache:      autocert.DirCache("certs"),       //Folder for storing certificates
+		}
+
+		server := http.Server{
+			Addr: ":443",
+			TLSConfig: &tls.Config{
+				GetCertificate: certManager.GetCertificate,
+				MinVersion:     tls.VersionTLS12,
+			},
+		}
+
+		fmt.Println("Starting server...")
+
+		go http.ListenAndServe(":80", nil)
+
+		server.ListenAndServeTLS("", "") //Key and cert are coming from Let's Encrypt
+
 	} else {
 		fmt.Println("Starting server on port 8000")
 
-		err := http.ListenAndServe("0.0.0.0:8000", nil)
+		err := http.ListenAndServe(":8000", nil)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -44,6 +64,7 @@ func ProxyHandler(hosts *HostMap) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fmt.Print(r.Method + " " + r.URL.String() + " \n")
 		fmt.Println("Request from:" + r.RemoteAddr + "\n")
+
 		re, err := hosts.GetProxy(r.Host)
 		if err != nil {
 			w.Write([]byte("404 Proxy not found"))
@@ -57,12 +78,6 @@ func ProxyHandler(hosts *HostMap) func(http.ResponseWriter, *http.Request) {
 func main() {
 	const anyPattern = `^/.*`
 
-	// certManager := autocert.Manager{
-	// 	Prompt:     autocert.AcceptTOS,
-	// 	HostPolicy: autocert.HostWhitelist(),   //Your domain here
-	// 	Cache:      autocert.DirCache("certs"), //Folder for storing certificates
-	// }
-
 	jsonData := ReadJson()
 	hosts := NewHostMap()
 	hosts.SetAll(jsonData)
@@ -72,19 +87,10 @@ func main() {
 
 	http.HandleFunc("/", ProxyHandler(hosts))
 
-	// server := http.Server{
-	// 	Addr: ":443",
-	// 	TLSConfig: &tls.Config{
-	// 		GetCertificate: certManager.GetCertificate,
-	// 		MinVersion:     tls.VersionTLS12,
-	// 	},
-	// }
-
-	runServer()
+	runServer(hosts.GetHostsArray())
 
 	// if err := http.ListenAndServe(":80", http.HandlerFunc(redirectToTls)); err != nil {
 	// 	log.Fatalf("ListenAndServe error: %v", err)
 	// }
-	// server.ListenAndServeTLS("", "") //Key and cert are coming from Let's Encrypt
 
 }

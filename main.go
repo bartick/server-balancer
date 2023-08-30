@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"os"
@@ -55,7 +56,7 @@ func runServer(hosts *HostMap, handler http.Handler) {
 
 		server := http.Server{
 			Addr:      ":443",
-			TLSConfig: certManager.TLSConfig(),
+			TLSConfig: &tls.Config{GetCertificate: certManager.GetCertificate},
 			Handler:   handler,
 		}
 

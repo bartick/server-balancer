@@ -55,9 +55,12 @@ func runServer(hosts *HostMap, handler http.Handler) {
 		}
 
 		server := http.Server{
-			Addr:      ":443",
-			TLSConfig: &tls.Config{GetCertificate: certManager.GetCertificate},
-			Handler:   handler,
+			Addr: ":443",
+			TLSConfig: &tls.Config{
+				GetCertificate: certManager.GetCertificate,
+				ClientAuth:     tls.RequestClientCert,
+			},
+			Handler: handler,
 		}
 
 		fmt.Println("Starting server...")

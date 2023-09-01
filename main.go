@@ -6,13 +6,23 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strings"
 
-	"golang.org/x/crypto/acme/autocert"
+	"github.com/foomo/simplecert"
+	"github.com/foomo/tlsconfig"
+
+	"github.com/joho/godotenv"
 )
 
-func redirectToTls(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "https://"+strings.Split(r.Host, ":")[0]+r.RequestURI, http.StatusMovedPermanently)
+func goDotEnvVariable(key string) string {
+
+	// load .env file
+	err := godotenv.Load(".env")
+
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	return os.Getenv(key)
 }
 
 type route struct {
@@ -45,27 +55,38 @@ func ProxyHandler(hosts *HostMap) func(http.ResponseWriter, *http.Request) {
 
 func runServer(hosts *HostMap, handler http.Handler) {
 
-	hostMap := hosts.GetHostsArray()
-
 	if os.Getenv("ENVIRONMENT") == "production" {
 
-		certManager := autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(hostMap...), //Your domain here
-			Cache:      autocert.DirCache("certs"),         //Folder for storing certificates
+		hostMap := hosts.GetHostsArray()
+
+		tlsConf := tlsconfig.NewServerTLSConfig(tlsconfig.TLSModeServerStrict)
+
+		cfg := simplecert.Default
+		cfg.Domains = hostMap
+		cfg.CacheDir = "letsencrypt"
+		cfg.SSLEmail = goDotEnvVariable("EMAIL")
+		cfg.HTTPAddress = ""
+
+		certReloader, err := simplecert.Init(cfg, func() {
+			os.Exit(0)
+		})
+		if err != nil {
+			log.Fatal("simplecert init failed: ", err)
 		}
 
 		server := http.Server{
-			Addr:      ":443",
-			TLSConfig: certManager.TLSConfig(),
+			Addr:      ":https",
+			TLSConfig: tlsConf,
 			Handler:   handler,
 		}
 
 		fmt.Println("Starting server...")
 
 		go func() {
-			http.ListenAndServe(":http", http.HandlerFunc(redirectToTls))
+			http.ListenAndServe(":http", http.HandlerFunc(simplecert.Redirect))
 		}()
+
+		tlsConf.GetCertificate = certReloader.GetCertificateFunc()
 
 		log.Fatal(server.ListenAndServeTLS("", ""))
 

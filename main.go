@@ -1,18 +1,19 @@
 package main
 
 import (
-	"crypto/tls"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 
 	"golang.org/x/crypto/acme/autocert"
 )
 
-// func redirectToTls(w http.ResponseWriter, r *http.Request) {
-// 	http.Redirect(w, r, "https://"+strings.Split(r.Host, ":")[0]+r.RequestURI, http.StatusMovedPermanently)
-// }
+func redirectToTls(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "https://"+strings.Split(r.Host, ":")[0]+r.RequestURI, http.StatusMovedPermanently)
+}
 
 type route struct {
 	pattern *regexp.Regexp
@@ -55,21 +56,18 @@ func runServer(hosts *HostMap, handler http.Handler) {
 		}
 
 		server := http.Server{
-			Addr: ":443",
-			TLSConfig: &tls.Config{
-				GetCertificate: certManager.GetCertificate,
-				ClientAuth:     tls.RequestClientCert,
-			},
-			Handler: handler,
+			Addr:      ":443",
+			TLSConfig: certManager.TLSConfig(),
+			Handler:   handler,
 		}
 
 		fmt.Println("Starting server...")
 
 		go func() {
-			http.ListenAndServe(":80", certManager.HTTPHandler(nil))
+			http.ListenAndServe(":http", http.HandlerFunc(redirectToTls))
 		}()
 
-		server.ListenAndServeTLS("", "") //Key and cert are coming from Let's Encrypt
+		log.Fatal(server.ListenAndServeTLS("", ""))
 
 	} else {
 		fmt.Println("Starting server on port 8000")

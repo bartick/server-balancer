@@ -1,5 +1,5 @@
 # builder stage
-FROM golang:1.21.0-bookworm AS builder
+FROM --platform=$BUILDPLATFORM golang:bullseye AS builder
 
 WORKDIR /server
 
@@ -7,7 +7,11 @@ COPY . .
 
 RUN go mod download
 
-RUN GOOS=linux GOARCH=amd64 go build -o app
+ENV GOOS=linux
+
+ENV GOARCH=amd64
+
+RUN go build -o app
 
 # final stage
 FROM ubuntu:22.04
